@@ -23,6 +23,7 @@ void Send_Array_Data(int socket_id, int *myArray)
     }
 }
 
+
 int main(int argc, char *argv[])
 {
     int sockfd, numbytes, i = 0;
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
     if (connect(sockfd, (struct sockaddr *)&their_addr,
                 sizeof(struct sockaddr)) == -1)
     {
-        perror("connect");
+        printf("Couldn't connect to Server at %s %s.\n",argv[1],argv[2]);
         exit(1);
     }
 

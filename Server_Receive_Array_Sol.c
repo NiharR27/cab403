@@ -14,6 +14,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
+#include "time.h"
+
 
 #define ARRAY_SIZE 30 /* Size of array to receive */
 
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("server starts listnening ...\n");
+    printf("server starts listening ...\n");
 
     /* repeat: accept, send, close the connection */
     /* for every accepted connection, use a sepetate process or thread to serve it */
@@ -101,8 +103,22 @@ int main(int argc, char *argv[])
             perror("accept");
             continue;
         }
-        printf("server: got connection from %s\n",
+        time_t tick;
+
+        char buffer[26];
+        struct tm* tm_info;
+
+        tick = time(NULL);
+        tm_info = localtime(&tick);
+
+        strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+
+        printf("%s server: got connection from %s\n",buffer,
                inet_ntoa(their_addr.sin_addr));
+        
+
+    
+
         if (!fork())
         { /* this is the child process */
 
