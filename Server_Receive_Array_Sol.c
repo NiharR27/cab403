@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "time.h"
+#include <stdbool.h>
 
 #define ARRAY_SIZE 90 /* Size of array to receive */
 
@@ -163,6 +164,105 @@ int main(int argc, char *argv[])
 
                 int num = receiveLength(new_fd);
 
+                if (num == 4)
+                {
+                }
+
+                if (num >= 6)
+                {
+                    char *msg1 = receiveMessage(new_fd);
+                    //   printf("msg1: %s\n", msg1);
+                    char *msg2 = receiveMessage(new_fd);
+                    char *msg3 = receiveMessage(new_fd);
+
+                    if (num == 6)
+                    //./client loc 200 -log logfilename filename
+                    //./client loc 200 -o outputfile filename
+                    {
+                        printf("\n%s,%s,%s\n", msg1, msg2, msg3);
+
+                        if (!strcmp(msg1, "-o"))
+                        {
+                            pid_t childpid; /* variriable to store the child's pid */
+                            int retval;     /* child process: user-provided return code */
+                            int status;     /* parent process: child's exit status */
+
+                            char *binaryPath = "./test";
+                            char *arg1 = "haha";
+                            char *arg2 = "/home";
+                            bool canbeexecute = true;
+
+                            printf("%s :Attempting to execute %s with argument %s.\n", buffer, msg1, msg2);
+
+                            childpid = fork();
+
+                            //  printf("\nchild pid is: %d\n", childpid);
+                            if (childpid < 0)
+                            {
+                                perror("fork");
+                            }
+                            else if (childpid == 0) /* fork() returns 0 to the child process */
+                            {
+
+                                
+                                // char *file = ">" + *msg2;
+                                // we are the child
+                                char string[100] = "";
+                                char *string1 = msg3;
+                                char *string2 = ">";
+                                char *string3 = "THISISBAD.txt";
+
+
+                                strcat(string,string1);
+                                strcat(string, " ");
+                                strcat(string,string2);
+                                strcat(string, " ");
+                                strcat(string, string3);
+                                
+
+                                printf("%s", string);
+                                system(string);
+                            }
+                            else
+                            {
+                                wait(&status);
+                                if (canbeexecute)
+                                {
+                                    printf("%s - %s has been executed with pid %d\n", buffer, msg1, childpid);
+                                    printf("%s - %d has terminated with status code %d\n", buffer, childpid, WEXITSTATUS(status));
+                                }
+                                exit(0);
+                            }
+                        }
+                    }
+                    else if (num == 7)
+                    //./client loc 200 -log logfilename filename arg
+                    //./client loc 200 -o outputfile filename arg
+                    {
+
+                        char *msg4 = receiveMessage(new_fd);
+                    }
+                    else if (num == 8)
+                    //./client loc 200 -o o.txt -log logfilename filename
+
+                    {
+                        char *msg4 = receiveMessage(new_fd);
+                        char *msg5 = receiveMessage(new_fd);
+                    }
+                    else if (num == 9)
+                    //./client loc 200 -o o.txt -log logfilename filename arg
+                    {
+                        char *msg4 = receiveMessage(new_fd);
+                        char *msg5 = receiveMessage(new_fd);
+                        char *msg6 = receiveMessage(new_fd);
+                    }
+
+                    free(msg1);
+                    free(msg2);
+                    free(msg3);
+                }
+
+                //./client loc 200 filename arg..
                 if (num == 5)
                 {
                     char *msg1 = receiveMessage(new_fd);
@@ -179,6 +279,8 @@ int main(int argc, char *argv[])
                     char *binaryPath = "./test";
                     char *arg1 = "haha";
                     char *arg2 = "/home";
+                    bool canbeexecute = true;
+
                     printf("%s :Attempting to execute %s with argument %s.\n", buffer, msg1, msg2);
 
                     childpid = fork();
@@ -191,16 +293,21 @@ int main(int argc, char *argv[])
                     else if (childpid == 0) /* fork() returns 0 to the child process */
                     {
                         // we are the child
-                        if (execl(msg1, msg1, msg2, NULL) == -1)
+                        if (execl(msg1, msg1, msg2, NULL) == -1) //./test arg
                         {
-                            printf("could not execute the file.");
+                            canbeexecute = false;
+                            printf("%s - could not execute the file '%s' with argument '%s'.\n", buffer, msg1, msg2);
                             exit(retval);
                         }
                     }
                     else
                     {
                         wait(&status);
-                        printf("%s - %s has been executed with pid %d",buffer,msg1,childpid);
+                        if (canbeexecute)
+                        {
+                            printf("%s - %s has been executed with pid %d\n", buffer, msg1, childpid);
+                            printf("%s - %d has terminated with status code %d\n", buffer, childpid, WEXITSTATUS(status));
+                        }
                         exit(0);
                     }
                     //
@@ -222,4 +329,19 @@ int main(int argc, char *argv[])
         while (waitpid(-1, NULL, WNOHANG) > 0)
             ; /* clean up child processes */
     }
+}
+
+void makeLogFile(char *name)
+{
+    FILE *fp;
+    fp = fopen(name, "w");
+
+    // Generate whatever you want logged here, "data" is just an example
+    char *data = "The data to be logged...";
+
+    // This lines writes the info in "data" to the file pointer specified
+    fputs(data, fp);
+
+    // Always remember to close your files
+    fclose(fp);
 }
