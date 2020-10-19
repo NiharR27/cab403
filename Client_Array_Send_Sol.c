@@ -12,15 +12,23 @@
 
 #define ARRAY_SIZE 30
 
-void Send_Array_Data(int socket_id, int *myArray)
-{
-    int i = 0;
-    uint16_t statistics;
-    for (i = 0; i < ARRAY_SIZE; i++)
-    {
-        statistics = htons(myArray[i]);
-        send(socket_id, &statistics, sizeof(uint16_t), 0);
+
+void sendMessage(int socket_id, char *msg) {
+    int len = strlen(msg);
+    int netLen = htonl(len);
+    //send the string length
+    send(socket_id,&netLen,sizeof(netLen), 0);
+    //send the actual message
+    if(send(socket_id,msg,len, 0) != len) {
+        fprintf(stderr,"send did not send all");
+        exit(1);
     }
+}
+
+void sendLength(int socket_id,int length)
+{
+    int num = htonl(length);
+   send(socket_id,&num,sizeof(num),0); 
 }
 
 
@@ -31,10 +39,17 @@ int main(int argc, char *argv[])
     struct hostent *he;
     struct sockaddr_in their_addr; /* connector's address information */
 
-    if (argc != 3)
+    if (argc < 3)
     {
-        fprintf(stderr, "usage: client_hostname port_number\n");
+        fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+        
         exit(1);
+    }
+    
+    if(argc > 3) {
+        for(int i =3; i < argc; i++) {
+            printf("%s\n",argv[i]);
+        }
     }
 
     if ((he = gethostbyname(argv[1])) == NULL)
@@ -63,14 +78,20 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    /* Create an array of squares of first 30 whole numbers */
-    int simpleArray[ARRAY_SIZE] = {0};
-    for (i = 0; i < ARRAY_SIZE; i++)
+
+    sendLength(sockfd,argc);
+
+
+    if(argc == 5) 
     {
-        simpleArray[i] = i * i;
+        printf("5 arguments passed");
+        sendMessage(sockfd, argv[3]);
+        sendMessage(sockfd, argv[4]);
+
+       // Send_Array_Data(sockfd, argc, argv);
     }
 
-    Send_Array_Data(sockfd, simpleArray);
+    
 
     /* Receive message back from server */
     if ((numbytes = recv(sockfd, buf, MAXDATASIZE, 0)) == -1)

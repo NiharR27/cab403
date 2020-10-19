@@ -16,28 +16,69 @@
 #include <errno.h>
 #include "time.h"
 
-
-#define ARRAY_SIZE 30 /* Size of array to receive */
+#define ARRAY_SIZE 90 /* Size of array to receive */
 
 #define BACKLOG 10 /* how many pending connections queue will hold */
 
 #define RETURNED_ERROR -1
 
+char *receiveMessage(int socket_id)
+{
+
+    char *msg;
+    int len;
+    int recvLen = recv(socket_id, &len, sizeof(len), 0);
+
+    if (recvLen != sizeof(len))
+    {
+        fprintf(stderr, "recv got invalid value ");
+        exit(1);
+    }
+
+    len = ntohl(len);
+    msg = malloc(len + 1); //+1 for null char.
+    if (recv(socket_id, msg, len, 0) != len)
+    {
+        fprintf(stderr, "not all meessage receive");
+        exit(1);
+    }
+
+    msg[len] = '\0';
+
+    return msg;
+}
+
+int receiveLength(int socket_id)
+{
+    int num;
+    int byes_received = recv(socket_id, &num, sizeof(num), 0);
+    if (byes_received == -1)
+    {
+        perror("recv()");
+        return 1;
+    }
+    num = ntohl(num);
+
+    return num;
+}
+
 int *Receive_Array_Int_Data(int socket_identifier, int size)
 {
     int number_of_bytes, i = 0;
-    uint16_t statistics;
-
+    //   u_char statistics;
+    char *buff[1024];
     int *results = malloc(sizeof(int) * size);
-    for (i = 0; i < size; i++)
+
+    //  for (i = 0; i < size; i++)
+    //  {
+    if ((number_of_bytes = recv(socket_identifier, buff, 1023, 0)) == RETURNED_ERROR)
     {
-        if ((number_of_bytes = recv(socket_identifier, &statistics, sizeof(uint16_t), 0)) == RETURNED_ERROR)
-        {
-            perror("recv");
-            exit(EXIT_FAILURE);
-        }
-        results[i] = ntohs(statistics);
+        perror("recv");
+        exit(EXIT_FAILURE);
     }
+    buff[number_of_bytes] = '\0';
+    printf("Received from server %s", buff);
+    // }
     return results;
 }
 
@@ -106,37 +147,73 @@ int main(int argc, char *argv[])
         time_t tick;
 
         char buffer[26];
-        struct tm* tm_info;
+        struct tm *tm_info;
 
         tick = time(NULL);
         tm_info = localtime(&tick);
 
         strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
 
-        printf("%s server: got connection from %s\n",buffer,
+        printf("%s server: got connection from %s\n", buffer,
                inet_ntoa(their_addr.sin_addr));
-        
-
-    
 
         if (!fork())
-        { /* this is the child process */
-
-            /* Call method to recieve array data */
-            int *results = Receive_Array_Int_Data(new_fd, ARRAY_SIZE);
-
-            /* Print out the array results sent by client */
-            for (i = 0; i < ARRAY_SIZE; i++)
+        {
             {
-                printf("Value of index[%d] = %d\n", i, results[i]);
+
+                int num = receiveLength(new_fd);
+
+                if (num == 5)
+                {
+                    char *msg1 = receiveMessage(new_fd);
+                    //   printf("msg1: %s\n", msg1);
+                    char *msg2 = receiveMessage(new_fd);
+                    //   printf("msg2: %s\n", msg2);
+
+                    //
+
+                    pid_t childpid; /* variriable to store the child's pid */
+                    int retval;     /* child process: user-provided return code */
+                    int status;     /* parent process: child's exit status */
+
+                    char *binaryPath = "./test";
+                    char *arg1 = "haha";
+                    char *arg2 = "/home";
+                    printf("%s :Attempting to execute %s with argument %s.\n", buffer, msg1, msg2);
+
+                    childpid = fork();
+
+                    //  printf("\nchild pid is: %d\n", childpid);
+                    if (childpid < 0)
+                    {
+                        perror("fork");
+                    }
+                    else if (childpid == 0) /* fork() returns 0 to the child process */
+                    {
+                        // we are the child
+                        if (execl(msg1, msg1, msg2, NULL) == -1)
+                        {
+                            printf("could not execute the file.");
+                            exit(retval);
+                        }
+                    }
+                    else
+                    {
+                        wait(&status);
+                        printf("%s - %s has been executed with pid %d",buffer,msg1,childpid);
+                        exit(0);
+                    }
+                    //
+                    free(msg1);
+                    free(msg2);
+                }
+
+                if (send(new_fd, "All of array data received by server\n", 40, 0) == -1)
+                    perror("send");
+
+                close(new_fd);
+                exit(0);
             }
-
-            free(results);
-
-            if (send(new_fd, "All of array data received by server\n", 40, 0) == -1)
-                perror("send");
-            close(new_fd);
-            exit(0);
         }
         else
         {
