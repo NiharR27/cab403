@@ -12,25 +12,25 @@
 
 #define ARRAY_SIZE 30
 
-
-void sendMessage(int socket_id, char *msg) {
+void sendMessage(int socket_id, char *msg)
+{
     int len = strlen(msg);
     int netLen = htonl(len);
     //send the string length
-    send(socket_id,&netLen,sizeof(netLen), 0);
+    send(socket_id, &netLen, sizeof(netLen), 0);
     //send the actual message
-    if(send(socket_id,msg,len, 0) != len) {
-        fprintf(stderr,"send did not send all");
+    if (send(socket_id, msg, len, 0) != len)
+    {
+        fprintf(stderr, "send did not send all");
         exit(1);
     }
 }
 
-void sendLength(int socket_id,int length)
+void sendLength(int socket_id, int length)
 {
     int num = htonl(length);
-   send(socket_id,&num,sizeof(num),0); 
+    send(socket_id, &num, sizeof(num), 0);
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -39,16 +39,26 @@ int main(int argc, char *argv[])
     struct hostent *he;
     struct sockaddr_in their_addr; /* connector's address information */
 
-    if (argc < 3)
+    if (argc == 1)
     {
         fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
-        
-        exit(1);
+
+        exit(0);
     }
-    
-    if(argc > 3) {
-        for(int i =3; i < argc; i++) {
-            printf("%s\n",argv[i]);
+    if (argv[1] != "--help")
+    {
+        fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+    }
+    else
+    {
+        fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+    }
+
+    if (argc > 3)
+    {
+        for (int i = 3; i < argc; i++)
+        {
+            printf("%s\n", argv[i]);
         }
     }
 
@@ -74,37 +84,109 @@ int main(int argc, char *argv[])
     if (connect(sockfd, (struct sockaddr *)&their_addr,
                 sizeof(struct sockaddr)) == -1)
     {
-        printf("Couldn't connect to Server at %s %s.\n",argv[1],argv[2]);
+        printf("Couldn't connect to Server at %s %s.\n", argv[1], argv[2]);
         exit(1);
     }
 
+    sendLength(sockfd, argc);
 
-    sendLength(sockfd,argc);
-
-
-    if(argc == 5) 
+    //only file
+    if (argc == 4)
+    {
+        //only pass the file path
+        sendMessage(sockfd, argv[3]);
+    }
+    //cl lolc 123 -o outf.txt file
+    if (argc == 5)
     {
         printf("5 arguments passed");
         sendMessage(sockfd, argv[3]);
         sendMessage(sockfd, argv[4]);
 
-       // Send_Array_Data(sockfd, argc, argv);
+        // Send_Array_Data(sockfd, argc, argv);
     }
+    // -o ahhsad.txt file
+    if (argc >= 6)
+    {
 
-    
+        // 4th arg is -o
+        if (!strcmp(argv[3], "-o"))
+        {
+            // 6th arg is log , length is at least 8
+            if (!strcmp(argv[5], "-log"))
+            {
+                // ./client localhost 30000 -o file.txt -log log.txt test.c
+                if (argc <= 7)
+                {
+                    fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+                }
+                else
+                // -o file.txt -log log.txt path
+                {
+                    sendMessage(sockfd, argv[3]);
+                    sendMessage(sockfd, argv[4]);
+                    sendMessage(sockfd, argv[5]);
+                    sendMessage(sockfd, argv[6]);
+                    sendMessage(sockfd, argv[7]);
+                    if (argc == 9)
+                    {
+                        sendMessage(sockfd, argv[8]);
+                    }
+                }
+            }
+            else
+            {
+                printf("THREE ARGUMENTS PASSED OF TOTAL 6");
+                sendMessage(sockfd, argv[3]);
+                sendMessage(sockfd, argv[4]);
+                sendMessage(sockfd, argv[5]);
+                // 6th arg is file
+                if (argc == 7)
+                {
+                    sendMessage(sockfd, argv[6]);
+                }
+            }
+        }
+        else if (!strcmp(argv[3], "-log"))
+        // ./client localhost 3000 -log log.txt file
+        {
+            printf("inside log");
+            if (!strcmp(argv[5], "-o"))
+            {
+                fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+                exit(0);
+            }
+            else
+            {
+                printf("here is the situation of -log log file");
+                sendMessage(sockfd, argv[3]);
+                sendMessage(sockfd, argv[4]);
+                sendMessage(sockfd, argv[5]);
+                // 6th arg is file
+                if (argc == 7)
+                {
+                    sendMessage(sockfd, argv[6]);
+                }
+            }
+        }
+        else
+        {
+            fprintf(stderr, "usage: controller <address> <port> {[-o out_file] [-log log_file] [-t seconds] <file> [arg...] | mem [pid] | memkill <percent>} \n");
+        }
+    }
 
     /* Receive message back from server */
-    if ((numbytes = recv(sockfd, buf, MAXDATASIZE, 0)) == -1)
-    {
-        perror("recv");
-        exit(1);
-    }
+    //  if ((numbytes = recv(sockfd, buf, MAXDATASIZE, 0)) == -1)
+    //  {
+    //      perror("recv");
+    //     exit(1);
+    // }
 
-    buf[numbytes] = '\0';
+    // buf[numbytes] = '\0';
 
-    buf[numbytes] = '\0';
+    //buf[numbytes] = '\0';
 
-    printf("Received: %s", buf);
+    //   printf("Received: %s", buf);
 
     close(sockfd);
 
